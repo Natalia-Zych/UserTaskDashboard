@@ -4,6 +4,7 @@ class User {
         this.name = name;
         this.username = username;
         this.email = email;
+        this.tasksList = [];
     }
 
     includes(phrase){
