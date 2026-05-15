@@ -9,7 +9,7 @@ class Manager {
         this.inputElement = document.getElementById("serch-user-input");
         this.elementListHTML = document.getElementById("users-list");
         this.tasksList = [];
-
+        this.nextTaskId = 1;
 
         //this.generateTestDataToLocalStorago();
         
@@ -34,7 +34,7 @@ class Manager {
 
         await this.fetchUsers();
         this.fetchTasks();
-        this.completeTasksUsers();
+        this.setTasksUsers();
         loadingElement.textContent = "";
 
         this.renderUsers();
@@ -80,9 +80,10 @@ class Manager {
         }
 
         this.tasksList = tasks;
+        this.nextTaskId = Math.max(...tasks.map(task => task.id)) + 1;
     }
     
-    completeTasksUsers(){
+    setTasksUsers(){
         this.usersList.forEach((user) => {
             user.tasksList = this.tasksList.filter((task) => task.userId == user.id);
         });
@@ -111,6 +112,12 @@ class Manager {
         itemUserHtml.textContent = `${user.name} (${user.username})`;
         itemUserHtml.id = user.id;
 
+        const inputElement = document.createElement("input");
+        inputElement.type = "text";
+        inputElement.placeholder = "Enter a new task...";
+        inputElement.addEventListener("keypress", (e) => this.addNewTask(e, user.id));
+        itemUserHtml.appendChild(inputElement);
+
         if (user.tasksList && user.tasksList.length) {
             
             const userTasksList = document.createElement("ul");
@@ -119,20 +126,25 @@ class Manager {
             user.tasksList.forEach((task) => {
                 console.log(`${user.id}------------${user.tasksList.length}`);
                 const taskListItem = document.createElement("li");
-                taskListItem.textContent = task.name;
-                userTasksList.appendChild(taskListItem);
+                //taskListItem.textContent = task.name;
 
-                const deleteTaskButton = document.createElement("button");
-                deleteTaskButton.className = "delete-btn";
-                deleteTaskButton.addEventListener("click", () => { this.deleteTask(taskListItem) });
-                deleteTaskButton.textContent = "Usuń -";
-                taskListItem.appendChild(deleteTaskButton);
+                userTasksList.appendChild(taskListItem);
 
                 const isCompletedCheckbox = document.createElement("input");
                 isCompletedCheckbox.type="checkbox";
                 isCompletedCheckbox.checked =task.isCompleted;
                 isCompletedCheckbox.addEventListener("input", (e) => this.taskIsCompletedChange(e, task));
                 taskListItem.appendChild(isCompletedCheckbox);
+
+                const label = document.createElement("label");
+                label.textContent = task.name;
+                taskListItem.appendChild(label);
+
+                const deleteTaskButton = document.createElement("button");
+                deleteTaskButton.className = "delete-btn";
+                deleteTaskButton.addEventListener("click", (e) =>  this.deleteTask(task.id, userTasksList, taskListItem));
+                deleteTaskButton.textContent = "Usuń -";
+                taskListItem.appendChild(deleteTaskButton);
 
 
             });
@@ -142,23 +154,29 @@ class Manager {
         this.elementListHTML.appendChild(itemUserHtml);
     }
 
+    deleteTask(taskId, parent, childElementToDelete){
+        this.tasksList = this.tasksList.filter((task) => task.id != taskId);
+        this.updateLocalStorage();
+        this.setTasksUsers();
+        parent.removeChild(childElementToDelete);
+    }
+
     taskIsCompletedChange(e, changedTask){
-        console.log(changedTask);
-        console.log(e);
-
-
         const index = this.tasksList.findIndex(task => task.id === changedTask.id);
         this.tasksList[index].isCompleted = e.srcElement.checked;
 
         //update localstorage
+        this.updateLocalStorage();
+
+        //update user tasks
+        this.setTasksUsers();
+    }
+
+    updateLocalStorage(){
         this.tasksList.toString();
         const tasksListString = JSON.stringify(this.tasksList);
         localStorage.setItem("tasks", tasksListString);
-
-        this.completeTasksUsers();
-
     }
-
 
     saveInLocalStorage() {
         if (this.usersList && this.usersList.length) {
@@ -190,6 +208,20 @@ class Manager {
         console.log("-----filtered users-----");
         this.filteredUsersList.forEach((user) => user.print());
     }
+
+    addNewTask(e, userId) {
+    if (event.key === "Enter") {
+            let task = new Task(this.nextTaskId, e.srcElement.value, userId, false);
+            this.nextTaskId += 1;
+            this.tasksList.push(task);
+            this.setTasksUsers();
+
+            //e.srcElement.value = "";
+            this.updateLocalStorage();
+            this.renderUsers();
+        }
+    }
+
 }
 
 export { Manager };
