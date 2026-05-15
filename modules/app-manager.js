@@ -10,6 +10,7 @@ class Manager {
         this.elementListHTML = document.getElementById("users-list");
         this.tasksList = [];
         this.nextTaskId = 1;
+        this.errorElement = document.getElementById("error-message");
 
         //this.generateTestDataToLocalStorago();
         
@@ -29,13 +30,13 @@ class Manager {
     }
 
     async start() {
-        const loadingElement = document.getElementById("loading");
-        loadingElement.textContent = "Loading...";
+        // const loadingElement = document.getElementById("loading");
+        // loadingElement.textContent = "Loading...";
 
         await this.fetchUsers();
         this.fetchTasks();
         this.setTasksUsers();
-        loadingElement.textContent = "";
+        //loadingElement.textContent = "";
 
         this.renderUsers();
 
@@ -46,6 +47,9 @@ class Manager {
     }
 
     async fetchUsers() {
+        const loadingElement = document.getElementById("loading");
+        loadingElement.textContent = "Loading...";
+        
         let users = [];
         try {
             const response = await fetch(API_URL);
@@ -60,13 +64,14 @@ class Manager {
         }
         catch (e) {
             console.error("Error fetching users from API:", e);
-            const errorElement = document.getElementById("error-message");
-            errorElement.textContent = "Error fetching users.";
+            this.errorElement.textContent = "Error fetching users.";
             users = [];
         }
 
         this.usersList = users;
         this.filteredUsersList = users;
+        loadingElement.textContent = "";
+
     }
 
     fetchTasks() {
@@ -102,7 +107,7 @@ class Manager {
 
         this.filteredUsersList.forEach(user => { this.renderUserItem(user) });
 
-        if (!this.filteredUsersList.length) {
+        if (!this.filteredUsersList.length && !this.errorElement.textContent.length) {
             emptyStateElement.textContent = "No users";
         }
     }
@@ -197,6 +202,7 @@ class Manager {
         this.inputElement.value = "";
         this.inputElement.addEventListener("input", (e) => {
             clearTimeout(timeout);
+            //debouonce
             timeout = setTimeout(() => { this.filterUsers(e) }, 1000);
         });
     }

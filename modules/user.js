@@ -10,8 +10,8 @@ class User {
     includes(phrase){
         phrase = phrase.toLowerCase();
         return this.name.toLowerCase().includes(phrase)
-            || this.username.toLowerCase().includes(phrase)
-            || this.email.toLowerCase().includes(phrase);
+            || this.username.toLowerCase().includes(phrase);
+            //|| this.email.toLowerCase().includes(phrase);
     }
 
     print(){
