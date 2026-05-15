@@ -35,7 +35,7 @@ class Manager {
         // loadingElement.textContent = "Loading...";
 
         await this.fetchUsers();
-        this.fetchTasks();
+        this.loadTasksFromLocalStorage();
         this.setTasksUsers();
         //loadingElement.textContent = "";
         this.renderFilter();
@@ -103,7 +103,7 @@ class Manager {
 
     }
 
-    fetchTasks() {
+    loadTasksFromLocalStorage() {
         let tasks = [];
         try {
             tasks = JSON.parse(localStorage.getItem("tasks"));
