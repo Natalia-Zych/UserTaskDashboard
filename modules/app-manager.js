@@ -1,5 +1,6 @@
 import { User } from "./user.js";
 import { Task } from "./task.js";
+import { FilterState, SELECTED_FILTER_KEY_LOCAL_STORAGE } from "./filter-state.js";
 const API_URL = "https://jsonplaceholder.typicode.com/users";
 
 class Manager {
@@ -11,13 +12,13 @@ class Manager {
         this.tasksList = [];
         this.nextTaskId = 1;
         this.errorElement = document.getElementById("error-message");
-
+        this.filterState = new FilterState();
         //this.generateTestDataToLocalStorago();
-        
+
     }
-    generateTestDataToLocalStorago(){
+    generateTestDataToLocalStorago() {
         const tasksLS = [];
-        
+
         tasksLS.push(new Task(1, "nauczyć się Javascript", 3, true));
         tasksLS.push(new Task(2, "zakupy", 3, false));
         tasksLS.push(new Task(3, "obiad", 3, true));
@@ -37,7 +38,7 @@ class Manager {
         this.fetchTasks();
         this.setTasksUsers();
         //loadingElement.textContent = "";
-
+        this.renderFilter();
         this.renderUsers();
 
         //this.saveInLocalStorage();
@@ -45,11 +46,39 @@ class Manager {
         this.setInput();
 
     }
+    renderFilter() {
+        const filterGroupDiv = document.getElementById("input-group");
+
+        const filterLabel = document.createElement("label");
+        filterLabel.textContent = "Filter tasks";
+        filterGroupDiv.appendChild(filterLabel);
+
+        const filterSelect = document.createElement("select");
+        filterSelect.addEventListener("change", (e) => this.filterChanged(e));
+        filterGroupDiv.appendChild(filterSelect);
+
+        this.filterState.taskCompletedFilter.forEach((filterItem) => {
+            const filterOption = document.createElement("option");
+            filterOption.textContent = filterItem;
+            filterOption.value = filterItem;
+            filterSelect.appendChild(filterOption);
+        });
+    }
+
+    filterChanged(e){
+        console.log(e);
+        if(this.filterState.selectedTaskCompletedFilter != e.srcElement.value){
+            this.filterState.selectedTaskCompletedFilter = e.srcElement.value;
+            this.setTasksUsers();
+            this.renderUsers();
+            this.updateFilterInLocalStorage();
+        }
+    }
 
     async fetchUsers() {
         const loadingElement = document.getElementById("loading");
         loadingElement.textContent = "Loading...";
-        
+
         let users = [];
         try {
             const response = await fetch(API_URL);
@@ -87,10 +116,10 @@ class Manager {
         this.tasksList = tasks;
         this.nextTaskId = Math.max(...tasks.map(task => task.id)) + 1;
     }
-    
-    setTasksUsers(){
+
+    setTasksUsers() {
         this.usersList.forEach((user) => {
-            user.tasksList = this.tasksList.filter((task) => task.userId == user.id);
+            user.tasksList = this.tasksList.filter((task) => task.userId == user.id && this.filterState.canDisplay(task.isCompleted));
         });
 
         this.filteredUsersList = this.usersList;
@@ -124,7 +153,7 @@ class Manager {
         itemUserHtml.appendChild(inputElement);
 
         if (user.tasksList && user.tasksList.length) {
-            
+
             const userTasksList = document.createElement("ul");
             itemUserHtml.appendChild(userTasksList);
 
@@ -136,8 +165,8 @@ class Manager {
                 userTasksList.appendChild(taskListItem);
 
                 const isCompletedCheckbox = document.createElement("input");
-                isCompletedCheckbox.type="checkbox";
-                isCompletedCheckbox.checked =task.isCompleted;
+                isCompletedCheckbox.type = "checkbox";
+                isCompletedCheckbox.checked = task.isCompleted;
                 isCompletedCheckbox.addEventListener("input", (e) => this.taskIsCompletedChange(e, task));
                 taskListItem.appendChild(isCompletedCheckbox);
 
@@ -147,7 +176,7 @@ class Manager {
 
                 const deleteTaskButton = document.createElement("button");
                 deleteTaskButton.className = "delete-btn";
-                deleteTaskButton.addEventListener("click", (e) =>  this.deleteTask(task.id, userTasksList, taskListItem));
+                deleteTaskButton.addEventListener("click", (e) => this.deleteTask(task.id, userTasksList, taskListItem));
                 deleteTaskButton.textContent = "Usuń -";
                 taskListItem.appendChild(deleteTaskButton);
 
@@ -159,28 +188,31 @@ class Manager {
         this.elementListHTML.appendChild(itemUserHtml);
     }
 
-    deleteTask(taskId, parent, childElementToDelete){
+    deleteTask(taskId, parent, childElementToDelete) {
         this.tasksList = this.tasksList.filter((task) => task.id != taskId);
-        this.updateLocalStorage();
+        this.updateTasksInLocalStorage();
         this.setTasksUsers();
         parent.removeChild(childElementToDelete);
     }
 
-    taskIsCompletedChange(e, changedTask){
+    taskIsCompletedChange(e, changedTask) {
         const index = this.tasksList.findIndex(task => task.id === changedTask.id);
         this.tasksList[index].isCompleted = e.srcElement.checked;
 
         //update localstorage
-        this.updateLocalStorage();
+        this.updateTasksInLocalStorage();
 
         //update user tasks
         this.setTasksUsers();
     }
 
-    updateLocalStorage(){
+    updateTasksInLocalStorage() {
         this.tasksList.toString();
         const tasksListString = JSON.stringify(this.tasksList);
         localStorage.setItem("tasks", tasksListString);
+    }
+    updateFilterInLocalStorage(){
+        localStorage.setItem(SELECTED_FILTER_KEY_LOCAL_STORAGE, this.filterState.selectedTaskCompletedFilter);
     }
 
     saveInLocalStorage() {
@@ -216,14 +248,14 @@ class Manager {
     }
 
     addNewTask(e, userId) {
-    if (event.key === "Enter") {
+        if (event.key === "Enter") {
             let task = new Task(this.nextTaskId, e.srcElement.value, userId, false);
             this.nextTaskId += 1;
             this.tasksList.push(task);
             this.setTasksUsers();
 
             //e.srcElement.value = "";
-            this.updateLocalStorage();
+            this.updateTasksInLocalStorage();
             this.renderUsers();
         }
     }
